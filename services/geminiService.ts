@@ -6,13 +6,14 @@ export const performResearch = async (
   query: string,
   mode: ResearchMode
 ): Promise<ResearchResponse> => {
-  const apiKey = process.env.API_KEY;
+  // Safely access the API key from the polyfilled process object
+  const apiKey = (window as any).process?.env?.API_KEY || (process?.env?.API_KEY);
 
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("API_KEY is missing. Please set it in your environment variables (Netlify/Vercel settings).");
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    throw new Error("API_KEY is missing. Please set it in your deployment environment variables.");
   }
 
-  // Initialize inside the function to ensure we use the latest env state
+  // Initialize with named parameter as required
   const ai = new GoogleGenAI({ apiKey });
   
   const systemInstructions = {
@@ -50,6 +51,6 @@ export const performResearch = async (
     };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "Research analysis failed due to a network or configuration error.");
+    throw new Error(error.message || "The research request failed. Check your API key and quota.");
   }
 };

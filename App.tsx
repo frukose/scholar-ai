@@ -51,9 +51,10 @@ const App: React.FC = () => {
   const resultsEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Check for environment variables on mount
+  // Check for environment variables on mount using safe window access
   useEffect(() => {
-    if (!process.env.API_KEY || process.env.API_KEY === "undefined") {
+    const key = (window as any).process?.env?.API_KEY || (process?.env?.API_KEY);
+    if (!key || key === "undefined" || key === "") {
       setEnvError("API Key missing. Please set API_KEY in your hosting dashboard environment variables.");
     }
   }, []);
@@ -157,20 +158,20 @@ const App: React.FC = () => {
             <i className="fa-solid fa-key text-3xl"></i>
           </div>
           <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">Setup Required</h2>
-          <p className="text-slate-500 mb-8 leading-relaxed">
-            ScholarPulse is almost ready. You need to add your <code className="bg-slate-100 px-2 py-1 rounded text-blue-600">API_KEY</code> to your deployment environment variables.
+          <p className="text-slate-500 mb-8 leading-relaxed text-sm">
+            ScholarPulse cannot start without an API Key. Please add <code className="bg-slate-100 px-2 py-1 rounded text-blue-600">API_KEY</code> to your environment variables.
           </p>
-          <div className="text-left bg-slate-50 rounded-2xl p-4 mb-8 text-xs font-mono text-slate-600">
+          <div className="text-left bg-slate-50 rounded-2xl p-4 mb-8 text-[11px] font-mono text-slate-600 border border-slate-200">
             1. Go to Netlify/Vercel Dashboard<br/>
             2. Site Settings > Environment Variables<br/>
-            3. Key: <span className="font-bold">API_KEY</span><br/>
-            4. Value: <span className="font-bold">[Your Gemini Key]</span>
+            3. Key: <span className="font-bold text-slate-900">API_KEY</span><br/>
+            4. Value: <span className="font-bold text-slate-900">[Your Key]</span>
           </div>
           <button 
             onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-sm"
           >
-            Check Again
+            Refresh & Connect
           </button>
         </div>
       </div>
