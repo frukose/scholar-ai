@@ -13,26 +13,10 @@ const QUICK_PROMPTS = [
 ];
 
 const MODE_DETAILS = {
-  [ResearchMode.SYNTHESIS]: {
-    label: 'Synthesis',
-    description: 'Combines findings from multiple sources into a coherent overview.',
-    icon: 'fa-vials'
-  },
-  [ResearchMode.LIT_REVIEW]: {
-    label: 'Lit Review',
-    description: 'Structured outline of key thematic clusters and citations.',
-    icon: 'fa-book-open'
-  },
-  [ResearchMode.CRITICAL_ANALYSIS]: {
-    label: 'Critical Analysis',
-    description: 'Evaluates methodologies, assumptions, and bias in existing work.',
-    icon: 'fa-magnifying-glass-chart'
-  },
-  [ResearchMode.HYPOTHESIS_GEN]: {
-    label: 'Hypothesis Gen',
-    description: 'Predicts novel testable research directions based on literature gaps.',
-    icon: 'fa-lightbulb'
-  }
+  [ResearchMode.SYNTHESIS]: { label: 'Synthesis', description: 'Combines findings from multiple sources.', icon: 'fa-vials' },
+  [ResearchMode.LIT_REVIEW]: { label: 'Lit Review', description: 'Structured outline of thematic clusters.', icon: 'fa-book-open' },
+  [ResearchMode.CRITICAL_ANALYSIS]: { label: 'Critical Analysis', description: 'Evaluates methodologies and bias.', icon: 'fa-magnifying-glass-chart' },
+  [ResearchMode.HYPOTHESIS_GEN]: { label: 'Hypothesis Gen', description: 'Predicts novel research directions.', icon: 'fa-lightbulb' }
 };
 
 const App: React.FC = () => {
@@ -41,7 +25,8 @@ const App: React.FC = () => {
   const [mode, setMode] = useState<ResearchMode>(ResearchMode.SYNTHESIS);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
-  const [envError, setEnvError] = useState<string | null>(null);
+  const [needsKey, setNeedsKey] = useState(false);
+  const [tempKey, setTempKey] = useState('');
   const [state, setState] = useState<SessionState>({
     history: [],
     isLoading: false,
@@ -51,25 +36,38 @@ const App: React.FC = () => {
   const resultsEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Check for environment variables on mount using safe window access
   useEffect(() => {
-    const key = (window as any).process?.env?.API_KEY || (process?.env?.API_KEY);
-    if (!key || key === "undefined" || key === "") {
-      setEnvError("API Key missing. Please set API_KEY in your hosting dashboard environment variables.");
+    // Safer check for key to prevent process-is-not-defined errors
+    const getEnvKey = () => {
+      try {
+        return (window as any).process?.env?.API_KEY || (process as any)?.env?.API_KEY;
+      } catch {
+        return null;
+      }
+    };
+    
+    const envKey = getEnvKey();
+    const localKey = localStorage.getItem('SCHOLARPULSE_KEY');
+    if (!envKey && !localKey) {
+      setNeedsKey(true);
     }
   }, []);
+
+  const saveKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (tempKey.trim()) {
+      localStorage.setItem('SCHOLARPULSE_KEY', tempKey.trim());
+      setNeedsKey(false);
+      window.location.reload();
+    }
+  };
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
       recognition.onstart = () => setIsRecording(true);
       recognition.onend = () => setIsRecording(false);
-      recognition.onerror = () => setIsRecording(false);
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         setQuery(prev => prev + (prev ? ' ' : '') + transcript);
@@ -78,101 +76,53 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      recognitionRef.current?.stop();
-    } else {
-      recognitionRef.current?.start();
-    }
-  };
-
-  const scrollToBottom = () => {
-    resultsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const toggleRecording = () => isRecording ? recognitionRef.current?.stop() : recognitionRef.current?.start();
 
   const handleResearch = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!query.trim()) return;
-
-    const currentQuery = query;
     setState(prev => ({ ...prev, isLoading: true, error: null }));
-    
     try {
-      const result = await performResearch(currentQuery, mode);
-      const resultWithQuery = { 
-        ...result, 
-        query: currentQuery, 
-        fullDate: new Date().toLocaleDateString() 
-      } as any;
-      
+      const result = await performResearch(query, mode);
       setState(prev => ({
         ...prev,
-        history: [resultWithQuery, ...prev.history],
+        history: [{ ...result, query, fullDate: new Date().toLocaleDateString() } as any, ...prev.history],
         isLoading: false
       }));
       setQuery('');
-      setTimeout(scrollToBottom, 100);
+      setTimeout(() => resultsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch (err: any) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: err.message || 'The AI service is currently at capacity. Please try again shortly.'
-      }));
+      setState(prev => ({ ...prev, isLoading: false, error: err.message }));
     }
   }, [query, mode]);
 
-  const clearHistory = () => {
-    if (window.confirm('Clear all research history?')) {
-      setState(prev => ({ ...prev, history: [] }));
-    }
-  };
-
-  const handleQuickPrompt = (text: string) => {
-    setQuery(text);
-    const input = document.getElementById('research-input');
-    input?.focus();
-  };
-
-  const restoreQuery = (text: string) => {
-    setQuery(text);
-    const input = document.getElementById('research-input');
-    input?.focus();
-    if (window.innerWidth < 1024) {
-      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
-  const filteredHistory = useMemo(() => {
-    if (!searchQuery.trim()) return state.history;
-    return state.history.filter((item: any) => 
-      item.query.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.content && item.content.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [state.history, searchQuery]);
-
-  if (envError) {
+  if (needsKey) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
         <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-2xl text-center">
-          <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center text-amber-600 mx-auto mb-6">
-            <i className="fa-solid fa-key text-3xl"></i>
+          <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mx-auto mb-6">
+            <i className="fa-solid fa-shield-halved text-2xl"></i>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">Setup Required</h2>
-          <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-            ScholarPulse cannot start without an API Key. Please add <code className="bg-slate-100 px-2 py-1 rounded text-blue-600">API_KEY</code> to your environment variables.
+          <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">API Configuration</h2>
+          <p className="text-slate-500 mb-8 text-sm leading-relaxed">
+            Enter your Google Gemini API Key to start researching. Your key is stored locally in your browser.
           </p>
-          <div className="text-left bg-slate-50 rounded-2xl p-4 mb-8 text-[11px] font-mono text-slate-600 border border-slate-200">
-            1. Go to Netlify/Vercel Dashboard<br/>
-            2. Site Settings > Environment Variables<br/>
-            3. Key: <span className="font-bold text-slate-900">API_KEY</span><br/>
-            4. Value: <span className="font-bold text-slate-900">[Your Key]</span>
-          </div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-sm"
-          >
-            Refresh & Connect
-          </button>
+          <form onSubmit={saveKey} className="space-y-4">
+            <input 
+              type="password" 
+              placeholder="Paste AI Studio Key here..."
+              value={tempKey}
+              onChange={(e) => setTempKey(e.target.value)}
+              className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-blue-500 outline-none transition-all"
+              required
+            />
+            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all shadow-lg uppercase tracking-widest text-xs">
+              Save & Get Started
+            </button>
+          </form>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" className="mt-6 inline-block text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:underline">
+            Get a free key from Google AI Studio <i className="fa-solid fa-external-link ml-1"></i>
+          </a>
         </div>
       </div>
     );
@@ -180,101 +130,40 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-hidden">
-      {/* Sidebar */}
-      <aside 
-        className={`${
-          isSidebarOpen ? 'w-80' : 'w-0'
-        } transition-all duration-300 ease-in-out bg-white border-r border-slate-200 flex flex-col z-50`}
-      >
-        <div className="p-4 border-b border-slate-100 min-w-[320px]">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-slate-800 flex items-center text-sm">
-              <i className="fa-solid fa-clock-rotate-left mr-2 text-blue-500"></i>
-              Research Archive
-            </h2>
-            <button onClick={clearHistory} className="text-slate-400 hover:text-red-500 transition-colors text-xs">
-              <i className="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-          <div className="relative">
-            <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
-            <input 
-              type="text" 
-              placeholder="Search past sessions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 pl-9 pr-4 text-xs focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none transition-all"
-            />
-          </div>
+      <aside className={`${isSidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 ease-in-out bg-white border-r border-slate-200 flex flex-col z-50 overflow-hidden`}>
+        <div className="p-4 border-b min-w-[320px]">
+          <h2 className="font-bold text-slate-800 text-sm mb-4"><i className="fa-solid fa-clock-rotate-left mr-2 text-blue-500"></i> Archive</h2>
+          <input type="text" placeholder="Search history..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-xs outline-none" />
         </div>
-        
-        <div className="flex-1 overflow-y-auto min-w-[320px]">
-          {filteredHistory.length === 0 ? (
-            <div className="p-12 text-center text-slate-400">
-              <i className="fa-solid fa-folder-open mb-3 text-2xl opacity-20"></i>
-              <p className="text-xs">{searchQuery ? 'No matching research found.' : 'History is empty.'}</p>
-            </div>
-          ) : (
-            <div className="p-2 space-y-1">
-              {filteredHistory.map((item: any, idx) => (
-                <div 
-                  key={idx} 
-                  onClick={() => restoreQuery(item.query)}
-                  className="p-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-blue-100 transition-all group relative overflow-hidden"
-                >
-                  <div className="text-[10px] font-bold text-blue-600 mb-1 flex justify-between">
-                    <span>{item.timestamp} <span className="text-slate-300 font-normal ml-1">· {item.fullDate}</span></span>
-                    <i className="fa-solid fa-rotate-left opacity-0 group-hover:opacity-100 transition-opacity text-blue-400"></i>
-                  </div>
-                  <p className="text-xs text-slate-700 font-medium line-clamp-2 leading-relaxed group-hover:text-blue-900 transition-colors">{item.query}</p>
-                  <div className="absolute inset-y-0 left-0 w-1 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto min-w-[320px] p-2">
+          {state.history.length === 0 ? <p className="text-center text-slate-400 py-10 text-xs">No research history</p> : 
+            state.history.filter(h => h.query?.toLowerCase().includes(searchQuery.toLowerCase())).map((item: any, i) => (
+              <div key={i} className="p-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-blue-100 mb-1" onClick={() => setQuery(item.query)}>
+                <p className="text-[10px] text-blue-600 font-bold mb-1">{item.timestamp}</p>
+                <p className="text-xs text-slate-700 font-medium truncate">{item.query}</p>
+              </div>
+            ))
+          }
         </div>
-        
-        <div className="p-4 bg-slate-50 border-t border-slate-100 min-w-[320px]">
-          <div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-            Gemini 3 Flash (Free Tier)
-          </div>
+        <div className="p-4 border-t min-w-[320px] flex justify-between items-center">
+           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gemini 3 Flash</span>
+           <button onClick={() => { localStorage.removeItem('SCHOLARPULSE_KEY'); window.location.reload(); }} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase tracking-widest">Reset Key</button>
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col relative h-screen overflow-hidden">
         <nav className="glass-effect px-6 py-3 flex items-center justify-between border-b border-slate-200 z-30">
           <div className="flex items-center space-x-4">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors">
               <i className={`fa-solid ${isSidebarOpen ? 'fa-indent' : 'fa-outdent'} text-lg`}></i>
             </button>
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-md">
-                <i className="fa-solid fa-atom text-sm"></i>
-              </div>
-              <span className="text-lg font-bold tracking-tight text-slate-800">ScholarPulse<span className="text-blue-600">AI</span></span>
-            </div>
+            <span className="text-lg font-bold tracking-tight text-slate-800">ScholarPulse<span className="text-blue-600">AI</span></span>
           </div>
-          
           <div className="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
             {Object.entries(MODE_DETAILS).map(([m, detail]) => (
-              <div key={m} className="relative group">
-                <button
-                  onClick={() => setMode(m as ResearchMode)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all flex items-center ${
-                    mode === m ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <i className={`fa-solid ${detail.icon} mr-1.5 text-[10px]`}></i>
-                  {detail.label}
-                </button>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-3 bg-slate-900 text-white rounded-xl text-[10px] leading-relaxed opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none shadow-xl border border-slate-800">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 border-4 border-transparent border-b-slate-900"></div>
-                  <p className="font-bold text-blue-400 mb-1 uppercase tracking-wider">{detail.label} Mode</p>
-                  {detail.description}
-                </div>
-              </div>
+              <button key={m} onClick={() => setMode(m as ResearchMode)} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${mode === m ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+                <i className={`fa-solid ${detail.icon} mr-1.5`}></i>{detail.label}
+              </button>
             ))}
           </div>
         </nav>
@@ -283,64 +172,19 @@ const App: React.FC = () => {
           <div className="max-w-4xl mx-auto w-full">
             {state.history.length === 0 && !state.isLoading && (
               <div className="text-center py-24 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                <span className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] mb-6 inline-block">Free Academic Tier</span>
-                <h1 className="text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
-                  High-Quality <span className="gradient-text">Research Intelligence</span>
-                </h1>
-                <p className="text-xl text-slate-500 max-w-xl mx-auto leading-relaxed mb-12 font-light">
-                  Free access to PhD-level synthesis using Google's most advanced Flash models.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
-                  <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-blue-300 transition-all group">
-                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
-                      <i className="fa-solid fa-globe text-xl"></i>
-                    </div>
-                    <h3 className="font-bold text-slate-800 text-lg">Web Grounding</h3>
-                    <p className="text-sm text-slate-500 mt-2 leading-relaxed">Integrated Google Search to fetch the latest academic pre-prints and journals.</p>
-                  </div>
-                  <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-purple-300 transition-all group">
-                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 mb-4 group-hover:scale-110 transition-transform">
-                      <i className="fa-solid fa-brain text-xl"></i>
-                    </div>
-                    <h3 className="font-bold text-slate-800 text-lg">Reasoning Engine</h3>
-                    <p className="text-sm text-slate-500 mt-2 leading-relaxed">Leverages thinking budgets for reliable and fast research audits.</p>
-                  </div>
-                </div>
+                <h1 className="text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">High-Quality <span className="gradient-text">Research Intelligence</span></h1>
+                <p className="text-xl text-slate-500 max-w-xl mx-auto leading-relaxed mb-12">PhD-level synthesis using Google's most advanced Flash models.</p>
               </div>
             )}
-
             <div className="space-y-8">
               {state.isLoading && (
                 <div className="bg-white rounded-[2.5rem] p-16 shadow-xl border border-slate-200 text-center animate-pulse">
-                  <div className="relative w-20 h-20 mx-auto mb-8">
-                    <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-25"></div>
-                    <div className="relative w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                      <i className="fa-solid fa-atom fa-spin text-blue-600 text-3xl"></i>
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-800 tracking-tight">Generating Insight...</h3>
-                  <p className="text-slate-400 text-sm mt-3 uppercase font-bold tracking-[0.3em]">Accessing Flash Knowledge Index</p>
+                   <i className="fa-solid fa-atom fa-spin text-blue-600 text-4xl mb-4"></i>
+                   <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest">Analyzing Knowledge Index</h3>
                 </div>
               )}
-
-              {state.error && (
-                <div className="bg-red-50 border border-red-200 text-red-900 p-6 rounded-3xl flex items-start animate-in fade-in">
-                  <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 mr-4 flex-shrink-0">
-                    <i className="fa-solid fa-triangle-exclamation"></i>
-                  </div>
-                  <div>
-                    <p className="font-black text-sm uppercase tracking-wider mb-1">Service Alert</p>
-                    <p className="text-sm opacity-80">{state.error}</p>
-                    <button onClick={() => handleResearch()} className="mt-4 text-xs font-black text-red-600 uppercase tracking-widest border-b-2 border-red-200 hover:border-red-600 transition-all">
-                      Try Again
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {state.history.map((item, idx) => (
-                <ResearchCard key={idx} data={item} />
-              ))}
+              {state.error && <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100">{state.error}</div>}
+              {state.history.map((item, idx) => <ResearchCard key={idx} data={item} />)}
               <div ref={resultsEndRef} />
             </div>
           </div>
@@ -348,70 +192,23 @@ const App: React.FC = () => {
 
         <div className="p-8 bg-white/80 backdrop-blur-xl border-t border-slate-200">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-2 no-scrollbar scroll-smooth">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap pr-2">Quick Actions:</span>
-              {QUICK_PROMPTS.map((prompt) => (
-                <button
-                  key={prompt.label}
-                  onClick={() => handleQuickPrompt(prompt.text)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-all whitespace-nowrap text-xs font-semibold group"
-                >
-                  <i className={`fa-solid ${prompt.icon} text-[10px]`}></i>
-                  <span>{prompt.label}</span>
+            <div className="flex space-x-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
+              {QUICK_PROMPTS.map((p) => (
+                <button key={p.label} onClick={() => setQuery(p.text)} className="px-4 py-2 rounded-full bg-slate-100 border text-slate-600 hover:border-blue-300 hover:bg-blue-50 transition-all text-xs font-semibold whitespace-nowrap">
+                  <i className={`fa-solid ${p.icon} mr-2`}></i>{p.label}
                 </button>
               ))}
             </div>
-
             <form onSubmit={handleResearch} className="relative group">
-              <input
-                id="research-input"
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={isRecording ? "Listening..." : "Describe your research objective..."}
-                className={`w-full bg-slate-100 border-2 rounded-[2rem] pl-8 pr-48 py-6 focus:outline-none focus:ring-8 focus:ring-blue-100 focus:border-blue-500 focus:bg-white transition-all text-xl font-medium ${isRecording ? 'border-red-500 ring-red-50' : 'border-transparent'}`}
-              />
-              <div className="absolute inset-y-2 right-2 flex items-center space-x-2">
-                <button 
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                    isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-400 hover:text-blue-600 border border-slate-200'
-                  }`}
-                >
-                  <i className={`fa-solid ${isRecording ? 'fa-stop' : 'fa-microphone'} text-lg`}></i>
-                </button>
-                <button 
-                  type="submit"
-                  disabled={state.isLoading || !query.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-8 h-14 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center group shadow-lg"
-                >
-                  {state.isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <span>Analyze</span>}
-                </button>
+              <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={isRecording ? "Listening..." : "Describe your research objective..."} className="w-full bg-slate-100 border-2 border-transparent rounded-[2rem] pl-8 pr-40 py-6 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xl font-medium shadow-sm" />
+              <div className="absolute inset-y-2 right-2 flex space-x-2">
+                <button type="button" onClick={toggleRecording} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-400 border'}`}><i className={`fa-solid ${isRecording ? 'fa-stop' : 'fa-microphone'}`}></i></button>
+                <button type="submit" disabled={state.isLoading || !query.trim()} className="bg-blue-600 text-white px-8 h-14 rounded-2xl font-black uppercase tracking-widest shadow-lg disabled:bg-slate-300">{state.isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : "Analyze"}</button>
               </div>
             </form>
-            <div className="flex justify-between items-center mt-6 px-4">
-              <div className="flex space-x-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span className="flex items-center"><i className="fa-solid fa-check text-green-500 mr-2"></i> Free Forever</span>
-                <span className="flex items-center"><i className="fa-solid fa-shield text-blue-500 mr-2"></i> Private Session</span>
-              </div>
-              <p className="text-[10px] text-slate-300 font-bold italic hidden sm:block">
-                ScholarPulse utilizes Gemini 3-Flash for lightning-fast research.
-              </p>
-            </div>
           </div>
         </div>
       </div>
-      
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 };

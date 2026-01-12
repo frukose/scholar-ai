@@ -6,14 +6,21 @@ export const performResearch = async (
   query: string,
   mode: ResearchMode
 ): Promise<ResearchResponse> => {
-  // Safely access the API key from the polyfilled process object
-  const apiKey = (window as any).process?.env?.API_KEY || (process?.env?.API_KEY);
+  // Safe access for browser environments
+  const getEnvKey = () => {
+    try {
+      return (window as any).process?.env?.API_KEY || (process as any)?.env?.API_KEY;
+    } catch {
+      return null;
+    }
+  };
 
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    throw new Error("API_KEY is missing. Please set it in your deployment environment variables.");
+  const apiKey = getEnvKey() || localStorage.getItem('SCHOLARPULSE_KEY');
+
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("API Key is missing. Please provide one in the setup screen.");
   }
 
-  // Initialize with named parameter as required
   const ai = new GoogleGenAI({ apiKey });
   
   const systemInstructions = {
@@ -51,6 +58,6 @@ export const performResearch = async (
     };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "The research request failed. Check your API key and quota.");
+    throw new Error(error.message || "Request failed. Check your API key and connection.");
   }
 };
