@@ -6,7 +6,7 @@ export const performResearch = async (
   query: string,
   mode: ResearchMode
 ): Promise<ResearchResponse> => {
-  // Initialization pulls from process.env.API_KEY, which you should set in Netlify's UI
+  // Initialization pulls from process.env.API_KEY
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const systemInstructions = {
@@ -17,13 +17,15 @@ export const performResearch = async (
   };
 
   try {
+    // Using gemini-3-flash-preview which is highly optimized for the Free Tier
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: query,
       config: {
-        systemInstruction: `You are a PhD-level research assistant. ${systemInstructions[mode]} Use formal, academic tone.`,
+        systemInstruction: `You are a PhD-level research assistant. ${systemInstructions[mode]} Use formal, academic tone. Ensure all claims are grounded in provided search results.`,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 4000 }
+        // Thinking budget is enabled for deeper reasoning on the flash model
+        thinkingConfig: { thinkingBudget: 2000 }
       },
     });
 
@@ -44,6 +46,7 @@ export const performResearch = async (
     };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error("Research analysis failed. Ensure your API_KEY is correctly configured in your hosting provider settings.");
+    // Specific error message for common Free Tier issues
+    throw new Error("Research analysis failed. This could be due to Free Tier rate limits or an invalid API Key in your environment variables.");
   }
 };

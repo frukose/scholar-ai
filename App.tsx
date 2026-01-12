@@ -128,7 +128,6 @@ const App: React.FC = () => {
     setQuery(text);
     const input = document.getElementById('research-input');
     input?.focus();
-    // Smooth scroll to input area if on mobile/smaller screens
     if (window.innerWidth < 1024) {
       input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -201,7 +200,7 @@ const App: React.FC = () => {
         <div className="p-4 bg-slate-50 border-t border-slate-100 min-w-[320px]">
           <div className="flex items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-            Powered by Gemini 3 Pro
+            Gemini 3 Flash (Free Tier)
           </div>
         </div>
       </aside>
@@ -233,7 +232,6 @@ const App: React.FC = () => {
                   <i className={`fa-solid ${detail.icon} mr-1.5 text-[10px]`}></i>
                   {detail.label}
                 </button>
-                {/* Tooltip */}
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 p-3 bg-slate-900 text-white rounded-xl text-[10px] leading-relaxed opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none shadow-xl border border-slate-800">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 border-4 border-transparent border-b-slate-900"></div>
                   <p className="font-bold text-blue-400 mb-1 uppercase tracking-wider">{detail.label} Mode</p>
@@ -253,7 +251,7 @@ const App: React.FC = () => {
                   High-Quality <span className="gradient-text">Research Intelligence</span>
                 </h1>
                 <p className="text-xl text-slate-500 max-w-xl mx-auto leading-relaxed mb-12 font-light">
-                  Free access to PhD-level synthesis using Google's most advanced Pro models.
+                  Free access to PhD-level synthesis using Google's most advanced Flash models.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
                   <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm hover:border-blue-300 transition-all group">
@@ -268,7 +266,7 @@ const App: React.FC = () => {
                       <i className="fa-solid fa-brain text-xl"></i>
                     </div>
                     <h3 className="font-bold text-slate-800 text-lg">Reasoning Engine</h3>
-                    <p className="text-sm text-slate-500 mt-2 leading-relaxed">Leverages advanced thinking budgets for deep methodological audits.</p>
+                    <p className="text-sm text-slate-500 mt-2 leading-relaxed">Leverages thinking budgets for reliable and fast research audits.</p>
                   </div>
                 </div>
               </div>
@@ -284,9 +282,101 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h3 className="text-2xl font-black text-slate-800 tracking-tight">Generating Insight...</h3>
-                  <p className="text-slate-400 text-sm mt-3 uppercase font-bold tracking-[0.3em]">Accessing Pro Knowledge Index</p>
+                  <p className="text-slate-400 text-sm mt-3 uppercase font-bold tracking-[0.3em]">Accessing Flash Knowledge Index</p>
                 </div>
               )}
 
               {state.error && (
-                <div className="bg-red-50 border border-red-200 text-red-900 p-6 rounded-
+                <div className="bg-red-50 border border-red-200 text-red-900 p-6 rounded-3xl flex items-start animate-in fade-in">
+                  <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-600 mr-4 flex-shrink-0">
+                    <i className="fa-solid fa-triangle-exclamation"></i>
+                  </div>
+                  <div>
+                    <p className="font-black text-sm uppercase tracking-wider mb-1">Service Alert</p>
+                    <p className="text-sm opacity-80">{state.error}</p>
+                    <button onClick={() => handleResearch()} className="mt-4 text-xs font-black text-red-600 uppercase tracking-widest border-b-2 border-red-200 hover:border-red-600 transition-all">
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {state.history.map((item, idx) => (
+                <ResearchCard key={idx} data={item} />
+              ))}
+              <div ref={resultsEndRef} />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8 bg-white/80 backdrop-blur-xl border-t border-slate-200">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-2 no-scrollbar scroll-smooth">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap pr-2">Quick Actions:</span>
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt.label}
+                  onClick={() => handleQuickPrompt(prompt.text)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition-all whitespace-nowrap text-xs font-semibold group"
+                >
+                  <i className={`fa-solid ${prompt.icon} text-[10px]`}></i>
+                  <span>{prompt.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleResearch} className="relative group">
+              <input
+                id="research-input"
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={isRecording ? "Listening..." : "Describe your research objective..."}
+                className={`w-full bg-slate-100 border-2 rounded-[2rem] pl-8 pr-48 py-6 focus:outline-none focus:ring-8 focus:ring-blue-100 focus:border-blue-500 focus:bg-white transition-all text-xl font-medium ${isRecording ? 'border-red-500 ring-red-50' : 'border-transparent'}`}
+              />
+              <div className="absolute inset-y-2 right-2 flex items-center space-x-2">
+                <button 
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                    isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-400 hover:text-blue-600 border border-slate-200'
+                  }`}
+                >
+                  <i className={`fa-solid ${isRecording ? 'fa-stop' : 'fa-microphone'} text-lg`}></i>
+                </button>
+                <button 
+                  type="submit"
+                  disabled={state.isLoading || !query.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-8 h-14 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center group shadow-lg"
+                >
+                  {state.isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <span>Analyze</span>}
+                </button>
+              </div>
+            </form>
+            <div className="flex justify-between items-center mt-6 px-4">
+              <div className="flex space-x-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <span className="flex items-center"><i className="fa-solid fa-check text-green-500 mr-2"></i> Free Forever</span>
+                <span className="flex items-center"><i className="fa-solid fa-shield text-blue-500 mr-2"></i> Private Session</span>
+              </div>
+              <p className="text-[10px] text-slate-300 font-bold italic hidden sm:block">
+                ScholarPulse utilizes Gemini 3-Flash for lightning-fast research.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default App;
