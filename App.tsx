@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [mode, setMode] = useState<ResearchMode>(ResearchMode.SYNTHESIS);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const [envError, setEnvError] = useState<string | null>(null);
   const [state, setState] = useState<SessionState>({
     history: [],
     isLoading: false,
@@ -49,6 +50,13 @@ const App: React.FC = () => {
   
   const resultsEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Check for environment variables on mount
+  useEffect(() => {
+    if (!process.env.API_KEY || process.env.API_KEY === "undefined") {
+      setEnvError("API Key missing. Please set API_KEY in your hosting dashboard environment variables.");
+    }
+  }, []);
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -137,9 +145,37 @@ const App: React.FC = () => {
     if (!searchQuery.trim()) return state.history;
     return state.history.filter((item: any) => 
       item.query.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchQuery.toLowerCase())
+      (item.content && item.content.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }, [state.history, searchQuery]);
+
+  if (envError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-2xl text-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center text-amber-600 mx-auto mb-6">
+            <i className="fa-solid fa-key text-3xl"></i>
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">Setup Required</h2>
+          <p className="text-slate-500 mb-8 leading-relaxed">
+            ScholarPulse is almost ready. You need to add your <code className="bg-slate-100 px-2 py-1 rounded text-blue-600">API_KEY</code> to your deployment environment variables.
+          </p>
+          <div className="text-left bg-slate-50 rounded-2xl p-4 mb-8 text-xs font-mono text-slate-600">
+            1. Go to Netlify/Vercel Dashboard<br/>
+            2. Site Settings > Environment Variables<br/>
+            3. Key: <span className="font-bold">API_KEY</span><br/>
+            4. Value: <span className="font-bold">[Your Gemini Key]</span>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest"
+          >
+            Check Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-hidden">
