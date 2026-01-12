@@ -1,0 +1,7 @@
+{
+  "name": "ScholarPulse AI",
+  "description": "A high-end research-oriented platform for synthesizing papers, analyzing complex data, and generating structured literature reviews using Gemini .",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
