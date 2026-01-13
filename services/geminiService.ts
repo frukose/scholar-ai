@@ -28,7 +28,8 @@ export const performResearch = async (
       config: {
         systemInstruction: `${systemInstructions[mode]} Use professional academic tone. Provide citations where possible.`,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 16000 }
+        // Keeping thinking budget within safe limits for free-tier reliability
+        thinkingConfig: { thinkingBudget: 12000 }
       },
     });
 
@@ -50,10 +51,11 @@ export const performResearch = async (
   } catch (error: any) {
     console.error("API Error:", error);
     
-    if (error.message?.includes("429")) {
-      throw new Error("Inference engine rate limit reached. Please wait a minute.");
+    // Improved error detection for rate limits (429)
+    if (error.message?.includes("429") || error.status === 429) {
+      throw new Error("Neural Core is currently at capacity for free-tier users. Please pause for 60 seconds before your next synthesis.");
     }
     
-    throw new Error(error.message || "An error occurred during neural synthesis.");
+    throw new Error(error.message || "An unexpected error occurred during neural synthesis.");
   }
 };
