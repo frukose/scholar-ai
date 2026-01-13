@@ -25,8 +25,6 @@ const App: React.FC = () => {
   const [mode, setMode] = useState<ResearchMode>(ResearchMode.SYNTHESIS);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
-  const [needsKey, setNeedsKey] = useState(false);
-  const [tempKey, setTempKey] = useState('');
   const [state, setState] = useState<SessionState>({
     history: [],
     isLoading: false,
@@ -35,32 +33,6 @@ const App: React.FC = () => {
   
   const resultsEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
-
-  useEffect(() => {
-    // Safer check for key to prevent process-is-not-defined errors
-    const getEnvKey = () => {
-      try {
-        return (window as any).process?.env?.API_KEY || (process as any)?.env?.API_KEY;
-      } catch {
-        return null;
-      }
-    };
-    
-    const envKey = getEnvKey();
-    const localKey = localStorage.getItem('SCHOLARPULSE_KEY');
-    if (!envKey && !localKey) {
-      setNeedsKey(true);
-    }
-  }, []);
-
-  const saveKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (tempKey.trim()) {
-      localStorage.setItem('SCHOLARPULSE_KEY', tempKey.trim());
-      setNeedsKey(false);
-      window.location.reload();
-    }
-  };
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -96,38 +68,6 @@ const App: React.FC = () => {
     }
   }, [query, mode]);
 
-  if (needsKey) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-2xl text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mx-auto mb-6">
-            <i className="fa-solid fa-shield-halved text-2xl"></i>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">API Configuration</h2>
-          <p className="text-slate-500 mb-8 text-sm leading-relaxed">
-            Enter your Google Gemini API Key to start researching. Your key is stored locally in your browser.
-          </p>
-          <form onSubmit={saveKey} className="space-y-4">
-            <input 
-              type="password" 
-              placeholder="Paste AI Studio Key here..."
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm focus:border-blue-500 outline-none transition-all"
-              required
-            />
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all shadow-lg uppercase tracking-widest text-xs">
-              Save & Get Started
-            </button>
-          </form>
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" className="mt-6 inline-block text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:underline">
-            Get a free key from Google AI Studio <i className="fa-solid fa-external-link ml-1"></i>
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex bg-slate-50 overflow-hidden">
       <aside className={`${isSidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 ease-in-out bg-white border-r border-slate-200 flex flex-col z-50 overflow-hidden`}>
@@ -146,8 +86,7 @@ const App: React.FC = () => {
           }
         </div>
         <div className="p-4 border-t min-w-[320px] flex justify-between items-center">
-           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gemini 3 Flash</span>
-           <button onClick={() => { localStorage.removeItem('SCHOLARPULSE_KEY'); window.location.reload(); }} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase tracking-widest">Reset Key</button>
+           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gemini 3 Flash Enabled</span>
         </div>
       </aside>
 

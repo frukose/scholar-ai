@@ -1,4 +1,5 @@
 
+// Use correct import for GoogleGenAI
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ResearchMode, ResearchResponse } from "../types";
 
@@ -6,19 +7,12 @@ export const performResearch = async (
   query: string,
   mode: ResearchMode
 ): Promise<ResearchResponse> => {
-  // Safe access for browser environments
-  const getEnvKey = () => {
-    try {
-      return (window as any).process?.env?.API_KEY || (process as any)?.env?.API_KEY;
-    } catch {
-      return null;
-    }
-  };
+  // Use process.env.API_KEY exclusively as per guidelines.
+  // The SDK initialization requires a named parameter: { apiKey: string }.
+  const apiKey = process.env.API_KEY;
 
-  const apiKey = getEnvKey() || localStorage.getItem('SCHOLARPULSE_KEY');
-
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("API Key is missing. Please provide one in the setup screen.");
+  if (!apiKey) {
+    throw new Error("API Key is missing. Research cannot be performed.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -31,18 +25,24 @@ export const performResearch = async (
   };
 
   try {
+    // Using gemini-3-pro-preview for complex research tasks.
+    // Ensure systemInstruction is passed inside the config object.
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: query,
+      model: "gemini-3-pro-preview",
+      contents: [{ parts: [{ text: query }] }],
       config: {
         systemInstruction: `You are a PhD-level research assistant. ${systemInstructions[mode]} Use formal, academic tone. Ensure all claims are grounded in provided search results.`,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 2000 }
+        // maxOutputTokens and thinkingBudget must be set together if specified.
+        // For research, we use a generous thinking budget for high-quality reasoning.
+        thinkingConfig: { thinkingBudget: 32768 }
       },
     });
 
+    // Access text property directly (not as a function).
     const content = response.text || "No insights generated.";
     
+    // Extract grounding URLs for Google Search results as required.
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const sources = groundingChunks
       .filter(chunk => chunk.web)
@@ -58,6 +58,6 @@ export const performResearch = async (
     };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error(error.message || "Request failed. Check your API key and connection.");
+    throw new Error(error.message || "Research request failed.");
   }
 };
