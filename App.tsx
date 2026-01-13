@@ -75,13 +75,13 @@ const App: React.FC = () => {
       <aside className={`${isSidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 ease-in-out bg-white border-r border-slate-200 flex flex-col z-50 overflow-hidden shadow-xl`}>
         <div className="p-6 border-b min-w-[320px]">
           <h2 className="font-bold text-slate-800 text-sm mb-4 flex items-center">
-            <i className="fa-solid fa-clock-rotate-left mr-2 text-blue-500"></i> Research Archive
+            <i className="fa-solid fa-clock-rotate-left mr-2 text-blue-500"></i> Session Archive
           </h2>
           <div className="relative">
             <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
             <input 
               type="text" 
-              placeholder="Filter sessions..." 
+              placeholder="Search archive..." 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 transition-all" 
@@ -92,8 +92,8 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto min-w-[320px] p-4 space-y-2">
           {state.history.length === 0 ? (
             <div className="text-center py-20 opacity-40">
-              <i className="fa-solid fa-folder-open text-3xl mb-3 block"></i>
-              <p className="text-xs font-medium">Empty archive</p>
+              <i className="fa-solid fa-box-archive text-3xl mb-3 block"></i>
+              <p className="text-xs font-medium">No archived findings</p>
             </div>
           ) : (
             state.history
@@ -113,10 +113,10 @@ const App: React.FC = () => {
 
         <div className="p-6 border-t min-w-[320px] bg-slate-50/50">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Production v1.0</span>
-            <div className="flex items-center text-[10px] font-bold text-green-600 uppercase tracking-widest">
-              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-              API Online
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">ScholarPulse Elite</span>
+            <div className="flex items-center text-[10px] font-bold text-blue-600 uppercase tracking-widest">
+              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+              Neural Core v3
             </div>
           </div>
         </div>
@@ -156,21 +156,21 @@ const App: React.FC = () => {
                   <i className="fa-solid fa-microscope text-3xl text-white"></i>
                 </div>
                 <h1 className="text-4xl lg:text-6xl font-black text-slate-900 mb-6 tracking-tighter">
-                  Next-Gen <span className="gradient-text">Research</span>
+                  Deep <span className="gradient-text">Academic Synthesis</span>
                 </h1>
                 <p className="text-lg lg:text-xl text-slate-500 max-w-lg mx-auto leading-relaxed mb-12 font-medium">
-                  Automate complex academic synthesis with real-time web grounding and PhD-level reasoning.
+                  Autonomous research engine for multidimensional data analysis and verified lit reviews.
                 </p>
                 <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
                    <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left">
                      <i className="fa-solid fa-bolt text-blue-500 mb-2"></i>
-                     <h3 className="text-xs font-black uppercase mb-1">Real-time</h3>
-                     <p className="text-[10px] text-slate-400 leading-normal">Live web searching for latest data</p>
+                     <h3 className="text-xs font-black uppercase mb-1">High Velocity</h3>
+                     <p className="text-[10px] text-slate-400 leading-normal">Optimized for complex extraction</p>
                    </div>
                    <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left">
-                     <i className="fa-solid fa-brain text-purple-500 mb-2"></i>
-                     <h3 className="text-xs font-black uppercase mb-1">Reasoning</h3>
-                     <p className="text-[10px] text-slate-400 leading-normal">Deep-thinking models for synthesis</p>
+                     <i className="fa-solid fa-earth-americas text-green-500 mb-2"></i>
+                     <h3 className="text-xs font-black uppercase mb-1">Grounding</h3>
+                     <p className="text-[10px] text-slate-400 leading-normal">Verifiable live source integration</p>
                    </div>
                 </div>
               </div>
@@ -186,8 +186,8 @@ const App: React.FC = () => {
                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 mb-2">
                        <i className="fa-solid fa-atom fa-spin text-2xl"></i>
                      </div>
-                     <h3 className="text-xl font-black text-slate-900 uppercase tracking-widest">Synthesizing Intel</h3>
-                     <p className="text-slate-400 text-sm max-w-xs mx-auto">Accessing global knowledge index and applying reasoning filters...</p>
+                     <h3 className="text-xl font-black text-slate-900 uppercase tracking-widest">Neural Synthesis</h3>
+                     <p className="text-slate-400 text-sm max-w-xs mx-auto">Running advanced reasoning filters and cross-referencing global indices...</p>
                    </div>
                 </div>
               )}
@@ -196,7 +196,7 @@ const App: React.FC = () => {
                 <div className="bg-red-50 text-red-700 p-6 rounded-3xl border border-red-100 flex items-start space-x-4 animate-in fade-in zoom-in">
                   <i className="fa-solid fa-circle-exclamation text-xl mt-0.5"></i>
                   <div>
-                    <h4 className="font-black text-xs uppercase mb-1">Analysis Halted</h4>
+                    <h4 className="font-black text-xs uppercase mb-1">System Alert</h4>
                     <p className="text-sm font-medium">{state.error}</p>
                   </div>
                 </div>
@@ -228,14 +228,14 @@ const App: React.FC = () => {
                 type="text" 
                 value={query} 
                 onChange={(e) => setQuery(e.target.value)} 
-                placeholder={isRecording ? "I'm listening..." : "Describe your research objective..."} 
-                className="w-full bg-slate-50 border-2 border-slate-200 rounded-[2.5rem] pl-10 pr-44 py-7 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xl font-medium shadow-sm placeholder:text-slate-300" 
+                placeholder={isRecording ? "Neural core listening..." : "Describe research objective..."} 
+                className="w-full bg-slate-50 border-2 border-slate-200 rounded-[2.5rem] pl-10 pr-44 py-7 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xl font-medium shadow-sm" 
               />
               <div className="absolute inset-y-3 right-3 flex space-x-3">
                 <button 
                   type="button" 
                   onClick={toggleRecording} 
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all border ${isRecording ? 'bg-red-500 text-white border-red-600 animate-pulse' : 'bg-white text-slate-400 border-slate-200 hover:border-blue-400 hover:text-blue-500'}`}
+                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all border ${isRecording ? 'bg-red-500 text-white animate-pulse border-red-600' : 'bg-white text-slate-400 border-slate-200 hover:text-blue-500 hover:border-blue-400'}`}
                 >
                   <i className={`fa-solid ${isRecording ? 'fa-stop' : 'fa-microphone'} text-lg`}></i>
                 </button>
@@ -244,12 +244,12 @@ const App: React.FC = () => {
                   disabled={state.isLoading || !query.trim()} 
                   className="bg-blue-600 hover:bg-blue-700 text-white px-10 h-14 rounded-[1.5rem] font-black uppercase tracking-[0.1em] shadow-lg shadow-blue-200 disabled:bg-slate-200 disabled:shadow-none transition-all active:scale-95"
                 >
-                  {state.isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : "Analyze"}
+                  {state.isLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : "Synthesize"}
                 </button>
               </div>
             </form>
             <p className="mt-4 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-              Grounded in real-world data &bull; Search Enabled &bull; 32k Thinking Budget
+              Grounded Reference Architecture &bull; Neural Inference Ready
             </p>
           </div>
         </footer>
