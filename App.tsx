@@ -193,11 +193,19 @@ const App: React.FC = () => {
               )}
               
               {state.error && (
-                <div className="bg-red-50 text-red-700 p-6 rounded-3xl border border-red-100 flex items-start space-x-4 animate-in fade-in zoom-in">
-                  <i className="fa-solid fa-circle-exclamation text-xl mt-0.5"></i>
+                <div className="bg-amber-50 text-amber-900 p-8 rounded-3xl border border-amber-200 flex items-start space-x-5 animate-in fade-in zoom-in shadow-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-hourglass-half text-amber-600 text-xl animate-pulse"></i>
+                  </div>
                   <div>
-                    <h4 className="font-black text-xs uppercase mb-1">System Alert</h4>
-                    <p className="text-sm font-medium">{state.error}</p>
+                    <h4 className="font-black text-sm uppercase mb-2 tracking-tight">Throttling Detected</h4>
+                    <p className="text-sm leading-relaxed opacity-80">{state.error}</p>
+                    <button 
+                      onClick={() => setState(prev => ({ ...prev, error: null }))}
+                      className="mt-4 text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900 underline underline-offset-4"
+                    >
+                      Dismiss Notification
+                    </button>
                   </div>
                 </div>
               )}

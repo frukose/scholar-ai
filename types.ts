@@ -12,9 +12,11 @@ export interface GroundingSource {
 }
 
 export interface ResearchResponse {
+  query?: string;
   content: string;
   sources: GroundingSource[];
   timestamp: string;
+  imageUrl?: string;
 }
 
 export interface SessionState {
