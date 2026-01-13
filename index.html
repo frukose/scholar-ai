@@ -11,20 +11,62 @@
     <script>
       // Polyfill 'process' to prevent 'process is not defined' errors in browser
       window.process = window.process || { env: {} };
+      
+      // Theme initialization to prevent flash
+      if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        :root {
+            --app-bg: #f8fafc;
+            --app-surface: #ffffff;
+            --app-text: #0f172a;
+            --app-border: #e2e8f0;
+        }
+
+        .dark {
+            --app-bg: #020617;
+            --app-surface: #0f172a;
+            --app-text: #f1f5f9;
+            --app-border: #1e293b;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: var(--app-bg);
+            color: var(--app-text);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .glass-effect {
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
+        .dark .glass-effect {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
         .gradient-text {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { 
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        .dark ::webkit-scrollbar-thumb { background: #334155; }
     </style>
 <script type="importmap">
 {
@@ -37,7 +79,7 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen">
+<body class="min-h-screen">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

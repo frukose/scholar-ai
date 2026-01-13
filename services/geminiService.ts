@@ -12,7 +12,7 @@ export const performResearch = async (
   const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    throw new Error("Missing Core API Configuration.");
+    throw new Error("SEC_CONFIG_MISSING: The system's cryptographic identity (API Key) is not configured. Please check environment variables.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -25,7 +25,6 @@ export const performResearch = async (
   };
 
   try {
-    // 1. Generate textual research content
     const textResponse: GenerateContentResponse = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: query }] }],
@@ -46,7 +45,6 @@ export const performResearch = async (
         uri: chunk.web?.uri || ""
       }));
 
-    // 2. Generate a contextual image for the research
     let imageUrl: string | undefined;
     try {
       const imgResponse = await ai.models.generateContent({
@@ -72,7 +70,7 @@ export const performResearch = async (
         }
       }
     } catch (imgError) {
-      console.warn("Image generation failed, skipping visual supplement.", imgError);
+      console.warn("Visual generation skipped due to secondary pipeline congestion.");
     }
 
     return {
@@ -82,20 +80,36 @@ export const performResearch = async (
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
   } catch (error: any) {
-    console.error(`API Error (Attempt ${attempt + 1}):`, error);
+    console.error(`Inference Fault (Attempt ${attempt + 1}):`, error);
     
-    const isRateLimit = error.message?.includes("429") || error.status === 429;
-    
-    if (isRateLimit && attempt < 2) {
-      const waitTime = Math.pow(2, attempt) * 2000;
-      await delay(waitTime);
-      return performResearch(query, mode, attempt + 1);
+    const message = error.message?.toLowerCase() || "";
+    const status = error.status || 0;
+
+    // 1. Quota / Rate Limit Handling
+    if (status === 429 || message.includes("429") || message.includes("quota") || message.includes("rate limit")) {
+      if (attempt < 3) {
+        const backoff = Math.pow(2, attempt) * 3000;
+        await delay(backoff);
+        return performResearch(query, mode, attempt + 1);
+      }
+      throw new Error("RATE_LIMIT: Research core is saturated with high-frequency requests. Please standby for 60 seconds.");
+    }
+
+    // 2. Authentication Errors
+    if (status === 401 || status === 403 || message.includes("key") || message.includes("unauthorized")) {
+      throw new Error("AUTH_FAULT: Access credentials rejected by Neural Core. Verify API configuration and project permissions.");
+    }
+
+    // 3. Network / Connectivity
+    if (message.includes("fetch") || message.includes("network") || message.includes("timeout")) {
+      throw new Error("LINK_ERROR: Significant packet loss or network disruption detected. Check your local uplink.");
+    }
+
+    // 4. Overload / Model Unavailable
+    if (status >= 500) {
+      throw new Error("CORE_FAULT: Global inference engine is currently undergoing maintenance or experiencing heavy load. Retry in 10-30 seconds.");
     }
     
-    if (isRateLimit) {
-      throw new Error("Neural Core is at maximum capacity. Please wait 60 seconds for the quota to reset.");
-    }
-    
-    throw new Error(error.message || "An unexpected error occurred during neural synthesis.");
+    throw new Error(`SYNTHESIS_ERROR: ${error.message || "A non-recoverable error occurred during data extraction."}`);
   }
 };
